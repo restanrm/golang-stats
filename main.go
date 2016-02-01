@@ -1,27 +1,17 @@
 package stats
 
-import "fmt" // Debugging
+import (
+	"fmt"
+	"sync"
+) // Debugging
 //import "strconv"
 import "time"
 
 //
 // Our data structure holding key/value pairs
 //
-var data map[string]int
-var beenhere bool
-
-func initData(key string) {
-	if !beenhere {
-		data = make(map[string]int)
-		beenhere = true
-	}
-
-	_, ok := data[key]
-	if !ok {
-		data[key] = 0
-	}
-
-}
+var data map[string]int = make(map[string]int)
+var m sync.RWMutex
 
 /**
 * Increment a stat.
@@ -34,7 +24,8 @@ func IncrStat(key string) {
 * Increment a key by a specified value.
  */
 func AddStat(key string, value int) {
-	initData(key)
+	m.Lock()
+	defer m.Unlock()
 	data[key] += value
 }
 
@@ -49,7 +40,8 @@ func DecrStat(key string) {
 * Decrement a key by a specified value.
  */
 func SubStat(key string, value int) {
-	initData(key)
+	m.Lock()
+	defer m.Unlock()
 	data[key] -= value
 }
 
@@ -57,7 +49,8 @@ func SubStat(key string, value int) {
 * Grab the value of a specific key.
  */
 func Stat(key string) int {
-	initData(key)
+	m.RLock()
+	defer m.RUnlock()
 	return (data[key])
 }
 
@@ -83,7 +76,9 @@ func StatDumpFunc(interval float64, cb func(data map[string]int)) {
 
 	for {
 		time.Sleep(duration)
+		m.RLock()
 		cb(data)
+		m.RUnlock()
 	}
 
 } // End of StatsDumpFunc()
@@ -102,5 +97,3 @@ func StatDump(interval float64) {
 	})
 
 } // End of StatsDump()
-
-
